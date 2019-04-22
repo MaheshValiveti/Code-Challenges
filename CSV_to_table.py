@@ -5,15 +5,17 @@ Created on Sat Apr 20 21:51:04 2019
 @author: Mahesh
 """
 
-import os, re, csv, sqlite3
+import sys, os, re, csv, sqlite3
 
+conn = sqlite3.connect('database.db')
+cur = conn.cursor()
 
 def getFileNames():
     
     #list all CSV filenames
     # go thru each CSV 
     try:    
-        for root, dirs, files in os.walk('c:\Cyndx_1'):
+        for root, dirs, files in os.walk('c:'):
             for file in files:
                 if file.endswith('.csv'):
                     generateTableScript(os.path.join(root, file), file)
@@ -21,7 +23,7 @@ def getFileNames():
     #print (filenames)
     except OSError as err:
         print("OS error: {0}".format(err))
-=    except:
+    except:
         print("Unexpected error:", sys.exc_info()[0])
         raise
     finally:
@@ -59,7 +61,7 @@ def generateTableScript(csvFile, fileName):
         insertDataIntoTable(sqlInsert, tuple(rows))
         
     print(sqlStr)
-    print(sqlInsert)
+    #print(sqlInsert)
 
     #print(to_db[1])
     csvfile.close
@@ -96,9 +98,6 @@ def findMatch1(val):
     return dataType
         
 #%%
-
-conn = sqlite3.connect('database.db')
-cur = conn.cursor()
 
 def createDBTable(tblScript):
     cur.execute(tblScript)    
