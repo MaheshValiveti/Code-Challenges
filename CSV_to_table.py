@@ -15,7 +15,7 @@ def getFileNames():
     #list all CSV filenames
     # go thru each CSV 
     try:    
-        for root, dirs, files in os.walk('c:'):
+        for root, dirs, files in os.walk('c:\Tech\Cyndx'):
             for file in files:
                 if file.endswith('.csv'):
                     generateTableScript(os.path.join(root, file), file)
@@ -68,20 +68,34 @@ def generateTableScript(csvFile, fileName):
     
 #%%
 def findMatch(val):
-     if re.match(r'\d+',val):
+     if re.match(r'[-+]*\d+$',val):
          dataType = 'int'
-     elif re.match(r'\d+\.\d+',val):
+     elif re.match(r'[-+]*\d+\.\d+$',val):
          dataType = 'float'
-     elif type(val) == bool:
-         dataType == 'boolean'
-     #elif
-     #: re.match(r'^\d\d\d\d-(0?[1-9]|1[0-2])-(0?[1-9]|[12][0-9]|3[01]) (00|[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9]):([0-9]|[0-5][0-9])$')
+     elif isBoolean(val):
+         dataType = 'boolean'
+     elif bool(re.match(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$',val)):
+         dataType = 'DateTime'
      else:
-         dataType = 'varchar(32)'
+         dataType = 'varchar(500)'
          
      return dataType
+#%%
 
-# 
+def isBoolean(val):
+    try:
+        return type(eval(val))==bool
+    except:
+        return False
+#%%
+# =============================================================================
+# print (findMatch ('-124'))
+# print (findMatch ('+1124.107'))
+# print (findMatch ('2019-10-10 10:01:01'))
+# print (isBoolean('False'))
+#print (findMatch('18000888888'))
+# =============================================================================
+
 #%%
 def findMatch1(val):  
     if isinstance(val, int):
@@ -90,8 +104,8 @@ def findMatch1(val):
         dataType = 'float'
     elif isinstance(val, bool):
         dataType = 'boolean'
-  #  elif isinstance(val, datetime.datetime):
-   #     dataType = 'bigint'
+        #  elif isinstance(val, datetime.datetime):
+        #  dataType = 'bigint'
     elif isinstance(val, str):
         dataType = 'varchar(500)'
     
