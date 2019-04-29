@@ -5,21 +5,27 @@ Created on Sat Apr 20 21:51:04 2019
 @author: Mahesh
 """
 
-import sys, os, re, csv, sqlite3
+import sys, os, re, csv, pyodbc
 
-conn = sqlite3.connect('database.db')
-cur = conn.cursor()
-
-def getFileNames():
+def main (path):
+    global conn, cur
     
+    conn = pyodbc.connect('Driver={SQL Server};'
+                      'Server=LAPTOP-IAQHKPIQ\MSSQLSERVER2016;'
+                      'Database=Test;'
+                      'Trusted_Connection=yes;')
+    cur = conn.cursor()
+    getFileNames(path)
+
+#%%    
+def getFileNames(path):
     #list all CSV filenames
     # go thru each CSV 
     try:    
-        for root, dirs, files in os.walk('c:\Tech\Cyndx'):
+        for root, dirs, files in os.walk(path):
             for file in files:
                 if file.endswith('.csv'):
-                    generateTableScript(os.path.join(root, file), file)
-
+                    createTableAndInsert(os.path.join(root, file), file)
     #print (filenames)
     except OSError as err:
         print("OS error: {0}".format(err))
@@ -27,44 +33,46 @@ def getFileNames():
         print("Unexpected error:", sys.exc_info()[0])
         raise
     finally:
-        cur.close()
-        conn.close()
+         cur.close()
+         conn.close()
 #%%
-
-def generateTableScript(csvFile, fileName):
+def createTableAndInsert(csvFile, fileName):
     
     with open(csvFile, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter = ',', quotechar = '"')
         strFields, strInsertFields  = '', ''
         
-        rows = [x for x in reader]
+        rows = [tuple(x) for x in reader]
         row_2 = rows[1]
+        fields = {}
         
         for index in range(len(row_2)):
-            strFields += ''.join(' column' + str(index+1)) 
+            fields['column'+str(index+1)] = findMatch(row_2[index])
+        
+        #print(fields)
+        
+        for key, value in fields.items():
+            strFields += ''.join(key) 
             strFields += ''.join('\t')
-            strFields += ''.join(findMatch(row_2[index]))
+            strFields += ''.join(value)
             strFields += ''.join(',\n')
-
-            strInsertFields += ''.join(' column' + str(index+1)) +','
-            
-    
+            strInsertFields += ''.join(key) +','
+        
         tableName = fileName.replace('.csv','')
         
-        sqlStr = 'create table ' + tableName + ' \n (' + strFields[:-2] + ')'
-        sqlInsert = ' INSERT INTO ' + tableName + '(' + strInsertFields[:-2] + ' ) VALUES(' + ','.join(tuple('?' * len(row_2))) + ')'
+        sqlStr = 'create table ' + tableName + '\n(' + strFields[:-2] + ')'
+        sqlInsert = 'INSERT INTO ' + tableName + '(' + strInsertFields[:-1] + ') VALUES(' + ','.join(tuple('?' * len(row_2))) + ')'
         
-        # To create table in DB
+        #To create table in DB
         createDBTable (sqlStr)
-       
-                #To insert data into table
-        insertDataIntoTable(sqlInsert, tuple(rows))
+        #To insert data into table
+        insertDataIntoTable(sqlInsert, rows)
         
-    print(sqlStr)
-    #print(sqlInsert)
-
-    #print(to_db[1])
     csvfile.close
+
+    #print(sqlStr)
+    #print(sqlInsert)
+    #print(to_db[1])
     
 #%%
 def findMatch(val):
@@ -78,8 +86,9 @@ def findMatch(val):
          dataType = 'DateTime'
      else:
          dataType = 'varchar(500)'
-         
+
      return dataType
+     
 #%%
 
 def isBoolean(val):
@@ -87,32 +96,17 @@ def isBoolean(val):
         return type(eval(val))==bool
     except:
         return False
+    
 #%%
 # =============================================================================
 # print (findMatch ('-124'))
 # print (findMatch ('+1124.107'))
 # print (findMatch ('2019-10-10 10:01:01'))
 # print (isBoolean('False'))
-#print (findMatch('18000888888'))
+# print (findMatch('18000888888'))
 # =============================================================================
 
 #%%
-def findMatch1(val):  
-    if isinstance(val, int):
-        dataType = 'int'
-    elif isinstance(val, float):
-        dataType = 'float'
-    elif isinstance(val, bool):
-        dataType = 'boolean'
-        #  elif isinstance(val, datetime.datetime):
-        #  dataType = 'bigint'
-    elif isinstance(val, str):
-        dataType = 'varchar(500)'
-    
-    return dataType
-        
-#%%
-
 def createDBTable(tblScript):
     cur.execute(tblScript)    
     conn.commit()
@@ -121,4 +115,9 @@ def createDBTable(tblScript):
 def insertDataIntoTable (InsertScript, rows):
     cur.executemany(InsertScript, rows)
     conn.commit()
+    
+#%%
+if __name__ == '__main__':
+    main(sys.argv[1])
+    
 #%%
